@@ -1,0 +1,12 @@
+A hub implementation for PubSubHubbub.
+
+See http://code.google.com/p/pubsubhubbub/
+
+Discussion:
+http://groups.google.com/group/pubsubhubbub
+
+Author: (but please use the mailing list instead)
+Brad Fitzpatrick <brad@danga.com> 
+
+Source:
+http://github.com/bradfitz/hubbub-hub/
