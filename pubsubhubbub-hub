@@ -12,29 +12,32 @@ use Getopt::Long;
 my $port = 8080;
 GetOptions("port=i" => \$port) or die "Unknown options.";
 
-my $subscriber_state = Net::PubSubHubbub::Hub::SubscriberState::InMemory->new;
-$subscriber_state->add_subscription(
-    Net::PubSubHubbub::Hub::Subscription->new(
-	topic => "http://127.0.0.1:$port/feed.atom",
-	callback => "http://127.0.0.1:$port/callback",
-	expiration => time() + 86400,
-    ));
+my $d = HTTP::Daemon->new(
+    LocalPort => $port,
+    ReuseAddr => 1,
+    ) or die;
 
+my $base_url = $d->url;
+$base_url .= "/" unless $base_url =~ m!/$!;
+
+my $subscriber_state = Net::PubSubHubbub::Hub::SubscriberState::InMemory->new;
 my $hub = Net::PubSubHubbub::Hub->new(
     subscriber_state => $subscriber_state,
     );
+
+$subscriber_state->add_subscription(
+    Net::PubSubHubbub::Hub::Subscription->new(
+	topic => "${base_url}feed.atom",
+	callback => "${base_url}/callback",
+	expiration => time() + 86400,
+    ));
 
 my $ico_data;
 if (open(my $fh, "hub.ico")) {
     $ico_data = do { local $/; <$fh>; };
 }
 
-my $d = HTTP::Daemon->new(
-    LocalPort => $port,
-    ReuseAddr => 1,
-    ) or die;
-print "Hub running at: ", $d->url, "\n";
-
+print "Hub running at: $base_url\n";
 while (my $c = $d->accept) {
     while (my $r = $c->get_request) {
 	my $res = favicon_response($r) || $hub->handle_request($r);
