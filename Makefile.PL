@@ -7,6 +7,7 @@ WriteMakefile( NAME            => 'Net::PubSubHubbub::Hub',
                EXE_FILES       => [ 'pubsubhubbub-hub' ],
                PREREQ_PM       => {
                    'LWP::UserAgent' => 0,
+		   'HTTP::Daemon' => 0,
                },
                ABSTRACT_FROM => 'lib/Net/PubSubHubbub/Hub.pm',
                AUTHOR     => 'Brad Fitzpatrick <brad@danga.com>',
