@@ -5,12 +5,24 @@ use lib 'lib';
 use HTTP::Daemon;
 use HTTP::Status;
 use Net::PubSubHubbub::Hub;
+use Net::PubSubHubbub::Hub::SubscriberState::InMemory;
+use Net::PubSubHubbub::Hub::Subscription;
 use Getopt::Long;
 
 my $port = 8080;
 GetOptions("port=i" => \$port) or die "Unknown options.";
 
-my $hub = Net::PubSubHubbub::Hub->new;
+my $subscriber_state = Net::PubSubHubbub::Hub::SubscriberState::InMemory->new;
+$subscriber_state->add_subscription(
+    Net::PubSubHubbub::Hub::Subscription->new(
+	topic => "http://127.0.0.1:$port/feed.atom",
+	callback => "http://127.0.0.1:$port/callback",
+	expiration => time() + 86400,
+    ));
+
+my $hub = Net::PubSubHubbub::Hub->new(
+    subscriber_state => $subscriber_state,
+    );
 
 my $ico_data;
 if (open(my $fh, "hub.ico")) {
