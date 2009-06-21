@@ -7,6 +7,7 @@ use HTTP::Status;
 use Net::PubSubHubbub::Hub;
 use Net::PubSubHubbub::Hub::SubscriberState::InMemory;
 use Net::PubSubHubbub::Hub::Subscription;
+use Net::PubSubHubbub::Hub::Worker::FetchFeed;
 use TheSchwartz;
 use Getopt::Long;
 use DBD::SQLite;
@@ -44,6 +45,9 @@ my $schwartz = TheSchwartz->new(
 		    pass => "" }],
     );
 
+# Also a worker in this process
+$schwartz->can_do("Net::PubSubHubbub::Hub::Worker::FetchFeed");
+
 my $subscriber_state = Net::PubSubHubbub::Hub::SubscriberState::InMemory->new;
 my $hub = Net::PubSubHubbub::Hub->new(
     subscriber_state => $subscriber_state,
@@ -67,9 +71,21 @@ while (my $c = $d->accept) {
     while (my $r = $c->get_request) {
 	my $res = favicon_response($r) || $hub->handle_request($r);
 	$c->send_response($res);
+
+        # Interleave processing of 'async' work.  It's not really
+        # async in this dummy hub implementation.
+        do_async_work();
     }
     $c->close;
     undef($c);
+}
+
+sub do_async_work {
+    local $SIG{__WARN__} = sub {
+        next if $_[0] =~ /closing dbh with active statement handles/;
+        warn $_[0];
+    };
+    $schwartz->work_until_done;
 }
 
 sub favicon_response {
