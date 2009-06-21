@@ -12,17 +12,35 @@ GetOptions("port=i" => \$port) or die "Unknown options.";
 
 my $hub = Net::PubSubHubbub::Hub->new;
 
+my $ico_data;
+if (open(my $fh, "hub.ico")) {
+    $ico_data = do { local $/; <$fh>; };
+}
+
 my $d = HTTP::Daemon->new(
     LocalPort => $port,
     ReuseAddr => 1,
     ) or die;
 print "Hub running at: ", $d->url, "\n";
+
 while (my $c = $d->accept) {
     while (my $r = $c->get_request) {
-	my $res = $hub->handle_request($r);
+	my $res = favicon_response($r) || $hub->handle_request($r);
 	$c->send_response($res);
     }
     $c->close;
     undef($c);
 }
 
+sub favicon_response {
+    my $req = shift;
+    return undef unless $req->method eq "GET" && $req->uri eq "/favicon.ico";
+    if ($ico_data) {
+	my $res = HTTP::Response->new(200);
+	$res->header("Content-Type" => "image/x-icon");
+	$res->content($ico_data);
+	return $res;
+    } else {
+	return HTTP::Response->new(404);
+    }
+}
