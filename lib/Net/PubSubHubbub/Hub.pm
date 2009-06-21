@@ -3,6 +3,7 @@ use strict;
 use HTTP::Request;
 use HTTP::Response;
 use Net::PubSubHubbub::Hub::SubscriberState::InMemory;
+use TheSchwartz;  # job queue
 
 our $VERSION = '0.01';
 
@@ -14,8 +15,21 @@ sub new {
     $self->{subscriber_state} ||=
 	Net::PubSubHubbub::Hub::SubscriberState::InMemory->new;
 
+    $self->{job_queue} = delete $opts{'job_queue'} or
+	die "Required 'job_queue' argument missing.";
+
     die "Unknown options: " . join(", ", sort keys %opts) if %opts;
     return $self;
+}
+
+sub subscriber_state {
+    my $self = shift;
+    return $self->{subscriber_state};
+}
+
+sub job_queue {
+    my $self = shift;
+    return $self->{job_queue};
 }
 
 sub debug {
@@ -69,17 +83,23 @@ sub handle_publish {
     my @subscribed_urls =
 	$self->subscriber_state->filter_subscribed_urls(@urls);
 
+    my @jobs;
+    foreach my $url ($self->subscriber_state->filter_subscribed_urls(@urls)) {
+	my $job = TheSchwartz::Job->new(
+	    funcname => "Hubbub-ProcessPing",
+	    arg => {
+		url => $_,
+	    });
+	push @jobs, $job;
+    }
+
+    $self->job_queue->insert_jobs(@jobs) if @jobs;
     print "Subscribed URLS: @subscribed_urls\n";
 
     my $res = HTTP::Response->new(200);
     $res->header("Content-Type" => "text/html");
     $res->content("Hello, publisher!");
     return $res;
-}
-
-sub subscriber_state {
-    my $self = shift;
-    return $self->{subscriber_state};
 }
 
 sub _durl {
