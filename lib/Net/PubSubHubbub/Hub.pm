@@ -86,9 +86,9 @@ sub handle_publish {
     my @jobs;
     foreach my $url ($self->subscriber_state->filter_subscribed_urls(@urls)) {
 	my $job = TheSchwartz::Job->new(
-	    funcname => "Hubbub-ProcessPing",
+	    funcname => "Net::PubSubHubbub::Hub::Worker::FetchFeed",
 	    arg => {
-		url => $_,
+		url => $url,
 	    });
 	push @jobs, $job;
     }
