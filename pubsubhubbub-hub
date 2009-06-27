@@ -15,8 +15,10 @@ use DBD::SQLite;
 my $port = 8080;
 my $theschwartz_filename = "theschwartz.sqlite";
 my $wipe_db = 0;
+my $opt_verbose = 0;
 
 GetOptions(
+    "verbose" => \$opt_verbose,
     "port=i" => \$port,
     "schwartzfilename=s" => \$theschwartz_filename,
     "wipedb" => \$wipe_db,
@@ -63,9 +65,17 @@ $subscriber_state->add_subscription(
 
 print "Hub running at: $base_url\n";
 while (my $c = $d->accept) {
+    my $child_pid = fork();
+    if (!defined($child_pid)) {
+        die "Fork failure: $!";
+    }
+    if ($child_pid) {
+        next;
+    }
+    debug("Connection on pid: $$");
     while (my $r = $c->get_request) {
 	my $res = favicon_response($r) || $hub->handle_request($r);
-	$c->send_response($res);
+        $c->send_response($res);
 
         # Interleave processing of 'async' work.  It's not really
         # async in this dummy hub implementation.
@@ -73,6 +83,7 @@ while (my $c = $d->accept) {
     }
     $c->close;
     undef($c);
+    exit(0);
 }
 
 sub do_async_work {
@@ -81,6 +92,14 @@ sub do_async_work {
         warn $_[0];
     };
     $schwartz->work_until_done;
+}
+
+sub debug {
+    my $msg = shift;
+    chomp $msg;
+    if ($opt_verbose) {
+        print STDERR "# $msg\n";
+    }
 }
 
 sub favicon_response {
