@@ -61,11 +61,6 @@ $subscriber_state->add_subscription(
 	expiration => time() + 86400,
     ));
 
-my $ico_data;
-if (open(my $fh, "hub.ico")) {
-    $ico_data = do { local $/; <$fh>; };
-}
-
 print "Hub running at: $base_url\n";
 while (my $c = $d->accept) {
     while (my $r = $c->get_request) {
@@ -91,6 +86,12 @@ sub do_async_work {
 sub favicon_response {
     my $req = shift;
     return undef unless $req->method eq "GET" && $req->uri eq "/favicon.ico";
+
+    my $ico_data;
+    if (open(my $fh, "hub.ico")) {
+        $ico_data = do { local $/; <$fh>; };
+    }
+
     if ($ico_data) {
 	my $res = HTTP::Response->new(200);
 	$res->header("Content-Type" => "image/x-icon");
