@@ -41,6 +41,11 @@ my $d = HTTP::Daemon->new(
 my $base_url = $d->url;
 $base_url .= "/" unless $base_url =~ m!/$!;
 
+$SIG{__WARN__} = sub {
+    next if $_[0] =~ /closing dbh with active statement handles/;
+    warn $_[0];
+};
+
 my $schwartz = TheSchwartz->new(
     databases => [{ dsn => "dbi:SQLite:dbname=$theschwartz_filename",
 		    user => "",
@@ -87,10 +92,6 @@ while (my $c = $d->accept) {
 }
 
 sub do_async_work {
-    local $SIG{__WARN__} = sub {
-        next if $_[0] =~ /closing dbh with active statement handles/;
-        warn $_[0];
-    };
     $schwartz->work_until_done;
 }
 

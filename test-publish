@@ -1,0 +1,21 @@
+#!/usr/bin/perl
+#
+
+use strict;
+use HTTP::Request::Common;
+use LWP::UserAgent;
+
+my $ua = LWP::UserAgent->new;
+my $host = `hostname`;
+chomp $host;
+my $base_url = "http://$host:8080/";
+
+my $res = $ua->request(POST $base_url,
+                       [ 'hub.mode' => 'publish',
+                         'hub.url' => "${base_url}feed.atom", ]);
+if ($res->is_success) {
+    print "SUCCESS: ", $res->content, "\n";
+} else {
+    print "FAILURE: ", $res->as_string, "\n";
+}
+
