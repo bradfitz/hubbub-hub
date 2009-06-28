@@ -7,6 +7,15 @@ use TheSchwartz;  # job queue
 
 our $VERSION = '0.01';
 
+# Global Hub instance, used for passing the Hub the Schwartz workers.
+# Ideally you'd be able to pass a worker instance to TheScwhartz'
+# can_do function, instead of a package name, rendering this
+# unnecessary, but...
+our $HUB;
+
+sub set_hub { shift; $HUB = shift }
+sub hub { $HUB }
+
 sub new {
     my ($class, %opts) = @_;
     my $self = bless {}, $class;

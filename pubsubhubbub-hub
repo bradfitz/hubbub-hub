@@ -64,6 +64,8 @@ my $hub = Net::PubSubHubbub::Hub->new(
     job_queue => $schwartz,
     );
 
+Net::PubSubHubbub::Hub->set_hub($hub);
+
 $subscriber_state->add_subscription(
     Net::PubSubHubbub::Hub::Subscription->new(
 	topic => "${base_url}feed.atom",
