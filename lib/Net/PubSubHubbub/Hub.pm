@@ -77,7 +77,7 @@ sub handle_request {
 
 sub handle_publish {
     my ($self, $req, $post_args) = @_;
-    my @urls = @{ $post_args->{'hub.url'} };
+    my @urls = @{ $post_args->{'hub.url'} || [] };
     print "URLS: @urls\n";
 
     my @subscribed_urls =
