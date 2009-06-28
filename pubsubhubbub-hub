@@ -16,12 +16,14 @@ my $port = 8080;
 my $theschwartz_filename = "theschwartz.sqlite";
 my $wipe_db = 0;
 my $opt_verbose = 0;
+my $opt_fork = 0;
 
 GetOptions(
     "verbose" => \$opt_verbose,
     "port=i" => \$port,
     "schwartzfilename=s" => \$theschwartz_filename,
     "wipedb" => \$wipe_db,
+    "fork" => \$opt_fork,
     ) or die "Unknown options.";
 
 unless ($wipe_db || -e $theschwartz_filename) {
@@ -43,13 +45,14 @@ $base_url .= "/" unless $base_url =~ m!/$!;
 
 $SIG{__WARN__} = sub {
     next if $_[0] =~ /closing dbh with active statement handles/;
-    warn $_[0];
+    warn "warning pid$$: $_[0]\n";
 };
 
 my $schwartz = TheSchwartz->new(
     databases => [{ dsn => "dbi:SQLite:dbname=$theschwartz_filename",
 		    user => "",
 		    pass => "" }],
+    verbose => $opt_verbose,
     );
 
 # Also a worker in this process
@@ -70,14 +73,16 @@ $subscriber_state->add_subscription(
 
 print "Hub running at: $base_url\n";
 while (my $c = $d->accept) {
-    my $child_pid = fork();
-    if (!defined($child_pid)) {
-        die "Fork failure: $!";
+    if ($opt_fork) {
+        my $child_pid = fork();
+        if (!defined($child_pid)) {
+            die "Fork failure: $!";
+        }
+        if ($child_pid) {
+            next;
+        }
+        debug("Connection on pid: $$");
     }
-    if ($child_pid) {
-        next;
-    }
-    debug("Connection on pid: $$");
     while (my $r = $c->get_request) {
 	my $res = favicon_response($r) || $hub->handle_request($r);
         $c->send_response($res);
@@ -88,11 +93,15 @@ while (my $c = $d->accept) {
     }
     $c->close;
     undef($c);
-    exit(0);
+    if ($opt_fork) {
+        exit(0);
+    }
 }
 
 sub do_async_work {
+    debug("start do_async_work");
     $schwartz->work_until_done;
+    debug("end do_async_work");
 }
 
 sub debug {
